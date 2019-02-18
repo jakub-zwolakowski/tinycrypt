@@ -2039,7 +2039,7 @@ int test_4(void)
 /*
  * Main task to test AES
  */
-int main(void)
+int main2(void)
 {
 	int result = TC_PASS;
 
