@@ -55,6 +55,9 @@
  *  test_ecc_ecdsa.c -- Implementation of some EC-DSA tests
  *
  */
+
+#include <tis_builtin.h>
+
 #include <tinycrypt/ecc.h>
 #include <tinycrypt/ecc_platform_specific.h>
 #include <tinycrypt/ecc_dsa.h>
@@ -337,7 +340,11 @@ int cavp_sign(bool verbose)
 	TC_PRINT("Test #1: ECDSAsign ");
 	TC_PRINT("NIST-p256, SHA2-256\n");
 
+	#ifdef __TRUSTINSOFT_ANALYZER__
+	return sign_vectors(&sha256_ctx, d, k, Msg, Qx, Qy, R, S, 2, verbose);
+	#else
 	return sign_vectors(&sha256_ctx, d, k, Msg, Qx, Qy, R, S, 15, verbose);
+	#endif
 }
 
 int vrfy_vectors(TCSha256State_t hash, char **msg_vec, char **qx_vec, char **qy_vec,
@@ -584,7 +591,11 @@ int cavp_verify(bool verbose)
 	printf("Test #2: ECDSAvrfy ");
 	printf("NIST-p256, SHA2-256\n");
 
+	#ifdef __TRUSTINSOFT_ANALYZER__
+	return vrfy_vectors(&sha256_ctx, Msg, Qx, Qy, R, S, Result, 2, verbose);
+	#else
 	return vrfy_vectors(&sha256_ctx, Msg, Qx, Qy, R, S, Result, 15, verbose);
+	#endif
 }
 
 int montecarlo_signverify(int num_tests, bool verbose)
@@ -632,6 +643,54 @@ int montecarlo_signverify(int num_tests, bool verbose)
 	return TC_PASS;
 }
 
+int TIS_test(void) {
+
+	uint8_t private[NUM_ECC_BYTES];
+	uint8_t public[2*NUM_ECC_BYTES];
+	uint8_t message_hash[NUM_ECC_BYTES];
+	uint8_t sig[2*NUM_ECC_BYTES];
+
+	/* Setup of the Cryptographically Secure PRNG. */
+	uECC_set_rng(&default_CSPRNG);
+
+	const struct uECC_Curve_t * curve = uECC_secp256r1();
+
+	tis_make_unknown(private, sizeof(private));
+	tis_make_unknown(message_hash, sizeof(message_hash));
+
+	/*
+	* @brief Generate an ECDSA signature for a given hash value.
+	* @return returns TC_CRYPTO_SUCCESS (1) if the signature generated successfully
+	*	 returns TC_CRYPTO_FAIL (0) if an error occurred.
+	*
+	* @param p_private_key IN -- Your private key.
+	* @param p_message_hash IN -- The hash of the message to sign.
+	* @param p_hash_size IN -- The size of p_message_hash in bytes.
+	* @param p_signature OUT -- Will be filled in with the signature value. Must be
+	* at least 2 * curve size long (for secp256r1, signature must be 64 bytes long).
+	*/
+	uECC_sign(private, message_hash, sizeof(message_hash), sig, curve);
+
+	/*
+	* @brief Verify an ECDSA signature.
+	* @return returns TC_SUCCESS (1) if the signature is valid
+	*	  returns TC_FAIL (0) if the signature is invalid.
+	*
+	* @param p_public_key IN -- The signer's public key.
+	* @param p_message_hash IN -- The hash of the signed data.
+	* @param p_hash_size IN -- The size of p_message_hash in bytes.
+	* @param p_signature IN -- The signature values.
+	*
+	*/
+	tis_make_unknown(public, sizeof(public));
+	tis_make_unknown(message_hash, sizeof(message_hash));
+	tis_make_unknown(sig, sizeof(sig));
+
+	uECC_verify(public, message_hash, sizeof(message_hash), sig, curve);
+
+	return TC_PASS;
+}
+
 int main()
 {
 	unsigned int result = TC_PASS;
@@ -642,24 +701,34 @@ int main()
 
 	bool verbose = true;
 
+	#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_sign)
 	TC_PRINT("Performing cavp_sign test:\n");
 	result = cavp_sign(verbose);
 	if (result == TC_FAIL) { /* terminate test */
 		TC_ERROR("cavp_sign test failed.\n");
 		goto exitTest;
 	}
+	#endif
+	#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_verify)
 	TC_PRINT("Performing cavp_verify test:\n");
 	result = cavp_verify(verbose);
 	if (result == TC_FAIL) {
 		TC_ERROR("cavp_verify test failed.\n");
 		goto exitTest;
 	}
+	#endif
+	#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_montecarlo_signverify)
 	TC_PRINT("Performing montecarlo_signverify test:\n");
+	#ifdef __TRUSTINSOFT_ANALYZER__
+	result = montecarlo_signverify(2, verbose);
+	#else
 	result = montecarlo_signverify(10, verbose);
+	#endif
 	if (result == TC_FAIL) {
 		TC_ERROR("montecarlo_signverify test failed.\n");
 	goto exitTest;
 	}
+	#endif
 
 	TC_PRINT("\nAll ECC-DSA tests succeeded.\n");
 

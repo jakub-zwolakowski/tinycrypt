@@ -31,6 +31,8 @@
   This module tests the CTR-PRNG routines
 */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/ctr_prng.h>
 #include <tinycrypt/aes.h>
 #include <tinycrypt/constants.h>
@@ -527,6 +529,92 @@ static int test_robustness(void)
 
 
 	return result;
+}
+
+int TIS_test(void)
+{
+	TCCtrPrng_t ctx;
+
+	uint8_t entropy[TC_AES_KEY_SIZE + TC_AES_BLOCK_SIZE];
+	uint8_t personalization[128];
+	uint8_t additional_input[128];
+	uint8_t output[128];
+
+	/**
+	 *  @brief CTR-PRNG initialization procedure
+	 *  Initializes prng context with entropy and personalization string (if any)
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		ctx == NULL,
+	 *		entropy == NULL,
+	 *		entropyLen < (TC_AES_KEY_SIZE + TC_AES_BLOCK_SIZE)
+	 *  @note       Only the first (TC_AES_KEY_SIZE + TC_AES_BLOCK_SIZE) bytes of
+	 *	      both the entropy and personalization inputs are used -
+	 *	      supplying additional bytes has no effect.
+	 *  @param ctx IN/OUT -- the PRNG context to initialize
+	 *  @param entropy IN -- entropy used to seed the PRNG
+	 *  @param entropyLen IN -- entropy length in bytes
+	 *  @param personalization IN -- personalization string used to seed the PRNG
+	 *  (may be null)
+	 *  @param plen IN -- personalization length in bytes
+	 *
+	 */
+	tis_make_unknown(entropy, sizeof(entropy));
+	tis_make_unknown(personalization, sizeof(personalization));
+	tc_ctr_prng_init(&ctx, entropy, sizeof(entropy), personalization, sizeof(personalization));
+
+	/**
+	 *  @brief CTR-PRNG generate procedure
+	 *  Generates outlen pseudo-random bytes into out buffer, updates prng
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CTR_PRNG_RESEED_REQ (-1) if a reseed is needed
+	 *	     returns TC_CRYPTO_FAIL (0) if:
+	 *		ctx == NULL,
+	 *		out == NULL,
+	 *		outlen >= 2^16
+	 *  @note Assumes tc_ctr_prng_init has been called for ctx
+	 *  @param ctx IN/OUT -- the PRNG context
+	 *  @param additional_input IN -- additional input to the prng (may be null)
+	 *  @param additionallen IN -- additional input length in bytes
+	 *  @param out IN/OUT -- buffer to receive output
+	 *  @param outlen IN -- size of out buffer in bytes
+	 */
+	tis_make_unknown(additional_input, sizeof(additional_input));
+	tis_make_unknown(output, sizeof(output));
+	tc_ctr_prng_generate(&ctx, additional_input, sizeof(additional_input), output, sizeof(output));
+
+	/**
+	 *  @brief CTR-PRNG reseed procedure
+	 *  Mixes entropy and additional_input into the prng context
+	 *  @return returns  TC_CRYPTO_SUCCESS (1)
+	 *  returns TC_CRYPTO_FAIL (0) if:
+	 *	  ctx == NULL,
+	 *	  entropy == NULL,
+	 *	  entropylen < (TC_AES_KEY_SIZE + TC_AES_BLOCK_SIZE)
+	 *  @note It is better to reseed an existing prng context rather than
+	 *	re-initialise, so that any existing entropy in the context is
+	 *	presereved.  This offers some protection against undetected failures
+	 *	of the entropy source.
+	 *  @note Assumes tc_ctr_prng_init has been called for ctx
+	 *  @param ctx IN/OUT -- the PRNG state
+	 *  @param entropy IN -- entropy to mix into the prng
+	 *  @param entropylen IN -- length of entropy in bytes
+	 *  @param additional_input IN -- additional input to the prng (may be null)
+	 *  @param additionallen IN -- additional input length in bytes
+	 */
+	tis_make_unknown(entropy, sizeof(entropy));
+	tis_make_unknown(additional_input, sizeof(additional_input));
+	tc_ctr_prng_reseed(&ctx, entropy, sizeof(entropy), additional_input, sizeof(additional_input));
+
+	/**
+	 *  @brief CTR-PRNG uninstantiate procedure
+	 *  Zeroes the internal state of the supplied prng context
+	 *  @return none
+	 *  @param ctx IN/OUT -- the PRNG context
+	 */
+	tc_ctr_prng_uninstantiate(&ctx);
+
+	return TC_PASS;
 }
 
 /*
