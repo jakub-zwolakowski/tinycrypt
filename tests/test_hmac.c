@@ -38,6 +38,8 @@
   - HMAC tests (RFC 4231 test vectors)
 */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/hmac.h>
 #include <tinycrypt/sha256.h>
 #include <tinycrypt/constants.h>
@@ -300,6 +302,79 @@ unsigned int test_7(void)
 			      sizeof(expected));
         TC_END_RESULT(result);
         return result;
+}
+
+int TIS_test(void)
+{
+	uint8_t key[131];
+	uint8_t buffer[256];
+	uint8_t digest[TC_SHA256_DIGEST_SIZE];
+
+	struct tc_hmac_state_struct ctx;
+
+	/**
+	* @brief HMAC init procedure
+	* Initializes ctx to begin the next HMAC operation
+	* @return returns TC_CRYPTO_SUCCESS (1)
+	*	 returns TC_CRYPTO_FAIL (0) if: ctx == NULL or key == NULL
+	* @param ctx IN/OUT -- struct tc_hmac_state_struct buffer to init
+	*/
+
+	tis_make_unknown(&ctx, sizeof(ctx));
+	tc_hmac_init(&ctx);
+
+	/**
+	*  @brief HMAC set key procedure
+	*  Configures ctx to use key
+	*  @return returns TC_CRYPTO_SUCCESS (1)
+	*	  returns TC_CRYPTO_FAIL (0) if
+	*		ctx == NULL or
+	*		key == NULL or
+	*		key_size == 0
+	* @param ctx IN/OUT -- the struct tc_hmac_state_struct to initial
+	* @param key IN -- the HMAC key to configure
+	* @param key_size IN -- the HMAC key size
+	*/
+	unsigned int size_key = tis_interval_split(0,131);
+	tis_make_unknown(&key, size_key);
+
+	tc_hmac_set_key(&ctx, key, size_key);
+
+	/**
+	*  @brief HMAC update procedure
+	*  Mixes data_length bytes addressed by data into state
+	*  @return returns TC_CRYPTO_SUCCCESS (1)
+	*	  returns TC_CRYPTO_FAIL (0) if: ctx == NULL or key == NULL
+	*  @note Assumes state has been initialized by tc_hmac_init
+	*  @param ctx IN/OUT -- state of HMAC computation so far
+	*  @param data IN -- data to incorporate into state
+	*  @param data_length IN -- size of data in bytes
+	*/
+	tis_make_unknown(buffer, sizeof(buffer));
+
+	// tc_hmac_init(&ctx);
+	tc_hmac_update(&ctx, buffer, sizeof(buffer));
+
+	/**
+	 *  @brief HMAC final procedure
+	 *  Writes the HMAC tag into the tag buffer
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		tag == NULL or
+	 *		ctx == NULL or
+	 *		key == NULL or
+	 *		taglen != TC_SHA256_DIGEST_SIZE
+	 *  @note ctx is erased before exiting. This should never be changed/removed.
+	 *  @note Assumes the tag bufer is at least sizeof(hmac_tag_size(state)) bytes
+	 *  state has been initialized by tc_hmac_init
+	 *  @param tag IN/OUT -- buffer to receive computed HMAC tag
+	 *  @param taglen IN -- size of tag in bytes
+	 *  @param ctx IN/OUT -- the HMAC state for computing tag
+	 */
+	tis_make_unknown(digest, sizeof(digest));
+	tc_hmac_final(digest, sizeof(digest), &ctx);
+
+	return TC_PASS;
 }
 
 /*
