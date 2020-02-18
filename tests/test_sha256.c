@@ -488,6 +488,7 @@ int main(void)
                 TC_ERROR("SHA256 test #12 failed.\n");
                 goto exitTest;
         }
+	#ifndef __TRUSTINSOFT_ANALYZER__
   	/* memory and computation intensive test cases: */
         result = test_13();
         if (result == TC_FAIL) {
@@ -501,6 +502,7 @@ int main(void)
                 TC_ERROR("SHA256 test #14 failed.\n");
                 goto exitTest;
         }
+	#endif
 
         TC_PRINT("All SHA256 tests succeeded!\n");
 
