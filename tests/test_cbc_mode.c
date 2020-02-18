@@ -37,6 +37,8 @@
  * - AES128 CBC mode encryption SP 800-38a tests
  */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/cbc_mode.h>
 #include <tinycrypt/constants.h>
 #include <test_utils.h>
@@ -148,6 +150,100 @@ exitTest1:
 	TC_END_RESULT(result);
 	return result;
 }
+
+#define NUM_OF_NIST_KEYS 16
+
+int TIS_test(void)
+{
+	struct tc_aes_key_sched_struct s;
+	struct tc_aes_key_sched_struct d;
+	const uint8_t nist_key[NUM_OF_NIST_KEYS];
+
+	uint8_t iv_buffer[16];
+	uint8_t encrypted[80];
+	uint8_t decrypted[64];
+	uint8_t inputtext[64];
+	uint8_t *p;
+	unsigned int length;
+
+	tis_make_unknown(nist_key, sizeof(nist_key));
+	tis_make_unknown(iv_buffer, sizeof(iv_buffer));
+	tis_make_unknown(inputtext, sizeof(inputtext));
+
+	tc_aes128_set_encrypt_key(&s, nist_key);
+	tc_aes128_set_decrypt_key(&d, nist_key);
+
+	/**
+	 *  @brief CBC encryption procedure
+	 *  CBC encrypts inlen bytes of the in buffer into the out buffer
+	 *  using the encryption key schedule provided, prepends iv to out
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		out == NULL or
+	 *		in == NULL or
+	 *		ctr == NULL or
+	 *		sched == NULL or
+	 *		inlen == 0 or
+	 *		(inlen % TC_AES_BLOCK_SIZE) != 0 or
+	 *		(outlen % TC_AES_BLOCK_SIZE) != 0 or
+	 *		outlen != inlen + TC_AES_BLOCK_SIZE
+	 *  @note Assumes: - sched has been configured by aes_set_encrypt_key
+	 *	      - iv contains a 16 byte random string
+	 *	      - out buffer is large enough to hold the ciphertext + iv
+	 *	      - out buffer is a contiguous buffer
+	 *	      - in holds the plaintext and is a contiguous buffer
+	 *	      - inlen gives the number of bytes in the in buffer
+	 *  @param out IN/OUT -- buffer to receive the ciphertext
+	 *  @param outlen IN -- length of ciphertext buffer in bytes
+	 *  @param in IN -- plaintext to encrypt
+	 *  @param inlen IN -- length of plaintext buffer in bytes
+	 *  @param iv IN -- the IV for the this encrypt/decrypt
+	 *  @param sched IN --  AES key schedule for this encrypt
+	 */
+	tc_cbc_mode_encrypt(encrypted, sizeof(inputtext) + TC_AES_BLOCK_SIZE,
+				       inputtext, sizeof(inputtext), iv_buffer, &s);
+
+	/**
+	 * @brief CBC decryption procedure
+	 * CBC decrypts inlen bytes of the in buffer into the out buffer
+	 * using the provided encryption key schedule
+	 * @return returns TC_CRYPTO_SUCCESS (1)
+	 *	 returns TC_CRYPTO_FAIL (0) if:
+	 *		out == NULL or
+	 *		in == NULL or
+	 *		sched == NULL or
+	 *		inlen == 0 or
+	 *		outlen == 0 or
+	 *		(inlen % TC_AES_BLOCK_SIZE) != 0 or
+	 *		(outlen % TC_AES_BLOCK_SIZE) != 0 or
+	 *		outlen != inlen + TC_AES_BLOCK_SIZE
+	 * @note Assumes:- in == iv + ciphertext, i.e. the iv and the ciphertext are
+	 *		contiguous. This allows for a very efficient decryption
+	 *		algorithm that would not otherwise be possible
+	 *	      - sched was configured by aes_set_decrypt_key
+	 *	      - out buffer is large enough to hold the decrypted plaintext
+	 *	      and is a contiguous buffer
+	 *	      - inlen gives the number of bytes in the in buffer
+	 * @param out IN/OUT -- buffer to receive decrypted data
+	 * @param outlen IN -- length of plaintext buffer in bytes
+	 * @param in IN -- ciphertext to decrypt, including IV
+	 * @param inlen IN -- length of ciphertext buffer in bytes
+	 * @param iv IN -- the IV for the this encrypt/decrypt
+	 * @param sched IN --  AES key schedule for this decrypt
+	 *
+	 */
+
+	tis_make_unknown(encrypted, sizeof(encrypted));
+
+	length = ((unsigned int) sizeof(encrypted)) - TC_AES_BLOCK_SIZE;
+
+	p = &encrypted[TC_AES_BLOCK_SIZE];
+
+	tc_cbc_mode_decrypt(decrypted, length, p, length, encrypted, &d);
+
+	return TC_PASS;
+}
+
 
 /*
  * Main task to test AES
