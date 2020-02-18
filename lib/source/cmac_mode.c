@@ -85,12 +85,12 @@ void gf_double(uint8_t *out, uint8_t *in)
 	uint8_t carry = (in[0] >> 7) ? gf_wrap : 0;
 
 	out += (TC_AES_BLOCK_SIZE - 1);
-	for (;;) {
-		*out-- = (*x << 1) ^ carry;
+	for (;; out--, x--) {
+		*out = (*x << 1) ^ carry;
 		if (x == in) {
 			break;
 		}
-		carry = *x-- >> 7;
+		carry = *x >> 7;
 	}
 }
 
