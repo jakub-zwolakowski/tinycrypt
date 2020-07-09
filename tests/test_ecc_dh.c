@@ -235,7 +235,11 @@ int cavp_ecdh(bool verbose)
 	TC_PRINT("Test #1: ECDH");
 	TC_PRINT("NIST-p256\n");
 
+#ifdef __TRUSTINSOFT_ANALYZER__
+	result = ecdh_vectors(x, y, d, Z, 2, verbose);
+#else
 	result = ecdh_vectors(x, y, d, Z, 25, verbose);
+#endif
 	if(result == TC_FAIL) {
 	     goto exitTest1;
 	}
@@ -293,7 +297,11 @@ int cavp_keygen(bool verbose)
 	TC_PRINT("Test #2: ECC KeyGen ");
 	TC_PRINT("NIST-p256\n");
 
+#ifdef __TRUSTINSOFT_ANALYZER__
+ 	result = keygen_vectors(d, x, y, 2, verbose);
+#else
  	result = keygen_vectors(d, x, y, 10, verbose);
+#endif
 	if(result == TC_FAIL) {
 	     goto exitTest1;
 	}
@@ -408,7 +416,11 @@ int cavp_pkv(bool verbose)
 	TC_PRINT("Test #3: PubKeyVerify ");
 	TC_PRINT("NIST-p256-SHA2-256\n");
 
+#ifdef __TRUSTINSOFT_ANALYZER__
+	return pkv_vectors(x, y, Result, 2, verbose);
+#else
 	return pkv_vectors(x, y, Result, 12, verbose);
+#endif
 }
 
 int montecarlo_ecdh(int num_tests, bool verbose) 
@@ -504,7 +516,7 @@ int main()
                 goto exitTest;
         }
 #endif
-#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_pkv)				
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_pkv)
 	TC_PRINT("Performing cavp_pkv test:\n");
 	result = cavp_pkv(verbose);
         if (result == TC_FAIL) { /* terminate test */
@@ -514,7 +526,11 @@ int main()
 #endif
 #if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_montecarlo_ecdh)
 	TC_PRINT("Performing montecarlo_ecdh test:\n");
+#ifdef __TRUSTINSOFT_ANALYZER__
+	result = montecarlo_ecdh(2, verbose);
+#else
 	result = montecarlo_ecdh(10, verbose);
+#endif
         if (result == TC_FAIL) { /* terminate test */
                 TC_ERROR("montecarlo_ecdh test failed.\n");
                 goto exitTest;
