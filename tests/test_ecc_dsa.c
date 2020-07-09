@@ -337,7 +337,11 @@ int cavp_sign(bool verbose)
 	TC_PRINT("Test #1: ECDSAsign ");
 	TC_PRINT("NIST-p256, SHA2-256\n");
 
+#ifdef __TRUSTINSOFT_ANALYZER__
+	return sign_vectors(&sha256_ctx, d, k, Msg, Qx, Qy, R, S, 2, verbose);
+#else
 	return sign_vectors(&sha256_ctx, d, k, Msg, Qx, Qy, R, S, 15, verbose);
+#endif
 }
 
 int vrfy_vectors(TCSha256State_t hash, char **msg_vec, char **qx_vec, char **qy_vec,
@@ -584,7 +588,11 @@ int cavp_verify(bool verbose)
 	printf("Test #2: ECDSAvrfy ");
 	printf("NIST-p256, SHA2-256\n");
 
+#ifdef __TRUSTINSOFT_ANALYZER__
+	return vrfy_vectors(&sha256_ctx, Msg, Qx, Qy, R, S, Result, 2, verbose);
+#else
 	return vrfy_vectors(&sha256_ctx, Msg, Qx, Qy, R, S, Result, 15, verbose);
+#endif
 }
 
 int montecarlo_signverify(int num_tests, bool verbose)
@@ -660,7 +668,11 @@ int main()
 #endif
 #if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_montecarlo_signverify)
 	TC_PRINT("Performing montecarlo_signverify test:\n");
+#ifdef __TRUSTINSOFT_ANALYZER__
+	result = montecarlo_signverify(2, verbose);
+#else
 	result = montecarlo_signverify(10, verbose);
+#endif
 	if (result == TC_FAIL) {
 		TC_ERROR("montecarlo_signverify test failed.\n");
 	goto exitTest;
