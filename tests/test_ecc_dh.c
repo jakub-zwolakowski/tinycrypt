@@ -488,30 +488,38 @@ int main()
 
 	bool verbose = true;
 
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_ecdh)
 	TC_PRINT("Performing cavp_ecdh test:\n");
 	result = cavp_ecdh(verbose);
         if (result == TC_FAIL) { /* terminate test */
                 TC_ERROR("cavp_ecdh test failed.\n");
                 goto exitTest;
         }
+#endif
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_keygen)
 	TC_PRINT("Performing cavp_keygen test:\n");
 	result = cavp_keygen(verbose);
         if (result == TC_FAIL) { /* terminate test */
                 TC_ERROR("cavp_keygen test failed.\n");
                 goto exitTest;
         }
+#endif
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_pkv)				
 	TC_PRINT("Performing cavp_pkv test:\n");
 	result = cavp_pkv(verbose);
         if (result == TC_FAIL) { /* terminate test */
                 TC_ERROR("cavp_pkv failed.\n");
                 goto exitTest;
         }
+#endif
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_montecarlo_ecdh)
 	TC_PRINT("Performing montecarlo_ecdh test:\n");
 	result = montecarlo_ecdh(10, verbose);
         if (result == TC_FAIL) { /* terminate test */
                 TC_ERROR("montecarlo_ecdh test failed.\n");
                 goto exitTest;
         }
+#endif
 
         TC_PRINT("All EC-DH tests succeeded!\n");
 

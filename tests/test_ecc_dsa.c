@@ -642,24 +642,30 @@ int main()
 
 	bool verbose = true;
 
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_sign)
 	TC_PRINT("Performing cavp_sign test:\n");
 	result = cavp_sign(verbose);
 	if (result == TC_FAIL) { /* terminate test */
 		TC_ERROR("cavp_sign test failed.\n");
 		goto exitTest;
 	}
+#endif
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_cavp_verify)
 	TC_PRINT("Performing cavp_verify test:\n");
 	result = cavp_verify(verbose);
 	if (result == TC_FAIL) {
 		TC_ERROR("cavp_verify test failed.\n");
 		goto exitTest;
 	}
+#endif
+#if !defined(__TRUSTINSOFT_ANALYZER__) || defined(TEST_montecarlo_signverify)
 	TC_PRINT("Performing montecarlo_signverify test:\n");
 	result = montecarlo_signverify(10, verbose);
 	if (result == TC_FAIL) {
 		TC_ERROR("montecarlo_signverify test failed.\n");
 	goto exitTest;
 	}
+#endif
 
 	TC_PRINT("\nAll ECC-DSA tests succeeded.\n");
 
