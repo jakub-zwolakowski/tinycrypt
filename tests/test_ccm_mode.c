@@ -487,7 +487,7 @@ exitTest1:
 	return result;
 }
 
-void TIS_test(void)
+int TIS_test(void)
 {
 	const uint8_t nist_key[NUM_NIST_KEYS];
 	struct tc_aes_key_sched_struct sched;
