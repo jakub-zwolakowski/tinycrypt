@@ -2037,7 +2037,7 @@ int test_4(void)
 	return result;
 }
 
-void TIS_test(void)
+int TIS_test(void)
 {
 	struct tc_aes_key_sched_struct s;
 	const uint8_t nist_key[NUM_OF_NIST_KEYS];
