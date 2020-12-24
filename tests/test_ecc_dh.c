@@ -55,6 +55,9 @@
  *  test_ecc_ecdh.c -- Implementation of some EC-DH tests
  *
  */
+
+#include <tis_builtin.h>
+
 #include <tinycrypt/ecc.h>
 #include <tinycrypt/ecc_dh.h>
 #include <tinycrypt/ecc_platform_specific.h>
@@ -487,6 +490,49 @@ int montecarlo_ecdh(int num_tests, bool verbose)
  exitTest1:
         TC_END_RESULT(result);
         return result;
+}
+
+int TIS_test(void) {
+	uECC_word_t public_key[2*NUM_ECC_WORDS];
+	uECC_word_t private_key[NUM_ECC_WORDS];
+
+	/* Setup of the Cryptographically Secure PRNG. */
+	uECC_set_rng(&default_CSPRNG);
+
+	const struct uECC_Curve_t * curve = uECC_secp256r1();
+
+	/**
+	* @brief Create a public/private key pair.
+	* @return returns TC_CRYPTO_SUCCESS (1) if the key pair was generated successfully
+	*	 returns TC_CRYPTO_FAIL (0) if error while generating key pair
+	*
+	* @param p_public_key OUT -- Will be filled in with the public key. Must be at
+	* least 2 * the curve size (in bytes) long. For curve secp256r1, p_public_key
+	* must be 64 bytes long.
+	* @param p_private_key OUT -- Will be filled in with the private key. Must be as
+	* long as the curve order (for secp256r1, p_private_key must be 32 bytes long).
+	*
+	*/
+	uECC_make_key(public_key, private_key, curve);
+
+	/**
+	* @brief Compute a shared secret given your secret key and someone else's
+	* public key.
+	* @return returns TC_CRYPTO_SUCCESS (1) if the shared secret was computed successfully
+	*	 returns TC_CRYPTO_FAIL (0) otherwise
+	*
+	* @param p_secret OUT -- Will be filled in with the shared secret value. Must be
+	* the same size as the curve size (for curve secp256r1, secret must be 32 bytes
+	* long.
+	* @param p_public_key IN -- The public key of the remote party.
+	* @param p_private_key IN -- Your private key.
+	*/
+
+	uECC_word_t secret[NUM_ECC_WORDS];
+
+	uECC_shared_secret(public_key, private_key, secret, curve);
+
+	return TC_PASS;
 }
 
 int main()

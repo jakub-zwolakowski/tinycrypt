@@ -40,6 +40,8 @@
   - HMAC-PRNG generate)
 */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/hmac_prng.h>
 #include <tinycrypt/constants.h>
 #include <test_utils.h>
@@ -6576,6 +6578,100 @@ unsigned int test_120(void)
 	return result;
 }
 
+int TIS_test(void)
+{
+	struct tc_hmac_prng_struct hmac_prng;
+	uint8_t buffer[256];
+	unsigned int buffer_len;
+
+	uint8_t seed_buffer[128];
+	unsigned int seed_buffer_len;
+
+	uint8_t add_buffer[64];
+	unsigned int add_buffer_len;
+
+	uint8_t output_buffer[256];
+	unsigned int output_buffer_len;
+
+	/**
+	 *  @brief HMAC-PRNG initialization procedure
+	 *  Initializes prng with personalization, disables tc_hmac_prng_generate
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		prng == NULL,
+	 *		personalization == NULL,
+	 *		plen > MAX_PLEN
+	 *  @note Assumes: - personalization != NULL.
+	 *	      The personalization is a platform unique string (e.g., the host
+	 *	      name) and is the last line of defense against failure of the
+	 *	      entropy source
+	 *  @warning    NIST SP 800-90A specifies 3 items as seed material during
+	 *	      initialization: entropy seed, personalization, and an optional
+	 *	      nonce. TinyCrypts requires instead a non-null personalization
+	 *	      (which is easily computed) and indirectly requires an entropy
+	 *	      seed (since the reseed function is mandatorily called after
+	 *	      init)
+	 *  @param prng IN/OUT -- the PRNG state to initialize
+	 *  @param personalization IN -- personalization string
+	 *  @param plen IN -- personalization length in bytes
+	 */
+
+	buffer_len = sizeof(buffer);
+	tis_make_unknown(buffer, buffer_len);
+
+	tc_hmac_prng_init(&hmac_prng, buffer, buffer_len);
+
+	/**
+	 *  @brief HMAC-PRNG reseed procedure
+	 *  Mixes seed into prng, enables tc_hmac_prng_generate
+	 *  @return returns  TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *	  prng == NULL,
+	 *	  seed == NULL,
+	 *	  seedlen < MIN_SLEN,
+	 *	  seendlen > MAX_SLEN,
+	 *	  additional_input != (const uint8_t *) 0 && additionallen == 0,
+	 *	  additional_input != (const uint8_t *) 0 && additionallen > MAX_ALEN
+	 *  @note Assumes:- tc_hmac_prng_init has been called for prng
+	 *	      - seed has sufficient entropy.
+	 *
+	 *  @param prng IN/OUT -- the PRNG state
+	 *  @param seed IN -- entropy to mix into the prng
+	 *  @param seedlen IN -- length of seed in bytes
+	 *  @param additional_input IN -- additional input to the prng
+	 *  @param additionallen IN -- additional input length in bytes
+	 */
+	seed_buffer_len = sizeof(seed_buffer);
+	tis_make_unknown(seed_buffer, seed_buffer_len);
+
+	add_buffer_len = sizeof(add_buffer);
+	tis_make_unknown(add_buffer, add_buffer_len);
+
+	tc_hmac_prng_reseed(&hmac_prng, seed_buffer,
+					seed_buffer_len,
+					add_buffer,
+					add_buffer_len);
+
+	/**
+	 *  @brief HMAC-PRNG generate procedure
+	 *  Generates outlen pseudo-random bytes into out buffer, updates prng
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_HMAC_PRNG_RESEED_REQ (-1) if a reseed is needed
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		out == NULL,
+	 *		prng == NULL,
+	 *		outlen == 0,
+	 *		outlen >= MAX_OUT
+	 *  @note Assumes tc_hmac_prng_init has been called for prng
+	 *  @param out IN/OUT -- buffer to receive output
+	 *  @param outlen IN -- size of out buffer in bytes
+	 *  @param prng IN/OUT -- the PRNG state
+	 */
+	output_buffer_len = sizeof(output_buffer_len);
+	tc_hmac_prng_generate(output_buffer, output_buffer_len, &hmac_prng);
+
+	return TC_PASS;
+}
 
 /*
  * Main task to test HMAC-PRNG

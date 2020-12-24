@@ -38,6 +38,8 @@
   - NIST SHA256 test vectors
 */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/sha256.h>
 #include <tinycrypt/constants.h>
 #include <test_utils.h>
@@ -405,6 +407,64 @@ unsigned int test_14(void)
 			      digest, sizeof(digest));
         TC_END_RESULT(result);
         return result;
+}
+
+int TIS_test(void)
+{
+	struct tc_sha256_state_struct s;
+	uint8_t m[400];
+	uint8_t digest[TC_SHA256_DIGEST_SIZE];
+
+	tis_make_unknown(digest, sizeof(digest));
+
+	/**
+	 *  @brief SHA256 initialization procedure
+	 *  Initializes s
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if s == NULL
+	 *  @param s Sha256 state struct
+	 */
+	tc_sha256_init(&s);
+
+	/**
+	 *  @brief SHA256 update procedure
+	 *  Hashes data_length bytes addressed by data into state s
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		s == NULL,
+	 *		s->iv == NULL,
+	 *		data == NULL
+	 *  @note Assumes s has been initialized by tc_sha256_init
+	 *  @warning The state buffer 'leftover' is left in memory after processing
+	 *	   If your application intends to have sensitive data in this
+	 *	   buffer, remind to erase it after the data has been processed
+	 *  @param s Sha256 state struct
+	 *  @param data message to hash
+	 *  @param datalen length of message to hash
+	 */
+	tis_make_unknown(m, sizeof(m));
+	tc_sha256_update (&s, m, sizeof(m));
+
+	/**
+	 *  @brief SHA256 final procedure
+	 *  Inserts the completed hash computation into digest
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		s == NULL,
+	 *		s->iv == NULL,
+	 *		digest == NULL
+	 *  @note Assumes: s has been initialized by tc_sha256_init
+	 *	digest points to at least TC_SHA256_DIGEST_SIZE bytes
+	 *  @warning The state buffer 'leftover' is left in memory after processing
+	 *	   If your application intends to have sensitive data in this
+	 *	   buffer, remind to erase it after the data has been processed
+	 *  @param digest unsigned eight bit integer
+	 *  @param Sha256 state struct
+	 */
+	tis_make_unknown(digest, sizeof(digest));
+	tc_sha256_final(digest, &s);
+
+  return TC_PASS;
 }
 
 /*

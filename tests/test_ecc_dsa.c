@@ -55,6 +55,9 @@
  *  test_ecc_ecdsa.c -- Implementation of some EC-DSA tests
  *
  */
+
+#include <tis_builtin.h>
+
 #include <tinycrypt/ecc.h>
 #include <tinycrypt/ecc_platform_specific.h>
 #include <tinycrypt/ecc_dsa.h>
@@ -637,6 +640,54 @@ int montecarlo_signverify(int num_tests, bool verbose)
 		}
 	}
 	TC_PRINT("\n");
+	return TC_PASS;
+}
+
+int TIS_test(void) {
+
+	uint8_t private[NUM_ECC_BYTES];
+	uint8_t public[2*NUM_ECC_BYTES];
+	uint8_t message_hash[NUM_ECC_BYTES];
+	uint8_t sig[2*NUM_ECC_BYTES];
+
+	/* Setup of the Cryptographically Secure PRNG. */
+	uECC_set_rng(&default_CSPRNG);
+
+	const struct uECC_Curve_t * curve = uECC_secp256r1();
+
+	tis_make_unknown(private, sizeof(private));
+	tis_make_unknown(message_hash, sizeof(message_hash));
+
+	/*
+	* @brief Generate an ECDSA signature for a given hash value.
+	* @return returns TC_CRYPTO_SUCCESS (1) if the signature generated successfully
+	*	 returns TC_CRYPTO_FAIL (0) if an error occurred.
+	*
+	* @param p_private_key IN -- Your private key.
+	* @param p_message_hash IN -- The hash of the message to sign.
+	* @param p_hash_size IN -- The size of p_message_hash in bytes.
+	* @param p_signature OUT -- Will be filled in with the signature value. Must be
+	* at least 2 * curve size long (for secp256r1, signature must be 64 bytes long).
+	*/
+	uECC_sign(private, message_hash, sizeof(message_hash), sig, curve);
+
+	/*
+	* @brief Verify an ECDSA signature.
+	* @return returns TC_SUCCESS (1) if the signature is valid
+	*	  returns TC_FAIL (0) if the signature is invalid.
+	*
+	* @param p_public_key IN -- The signer's public key.
+	* @param p_message_hash IN -- The hash of the signed data.
+	* @param p_hash_size IN -- The size of p_message_hash in bytes.
+	* @param p_signature IN -- The signature values.
+	*
+	*/
+	tis_make_unknown(public, sizeof(public));
+	tis_make_unknown(message_hash, sizeof(message_hash));
+	tis_make_unknown(sig, sizeof(sig));
+
+	uECC_verify(public, message_hash, sizeof(message_hash), sig, curve);
+
 	return TC_PASS;
 }
 
