@@ -41,6 +41,7 @@
  * - AES128 NIST variable-key and fixed-text
  */
 
+#include <tis_builtin.h>
 #include <tinycrypt/aes.h>
 #include <tinycrypt/constants.h>
 #include <test_utils.h>
@@ -2034,6 +2035,77 @@ int test_4(void)
 	TC_END_RESULT(result);
 
 	return result;
+}
+
+void TIS_test(void)
+{
+	struct tc_aes_key_sched_struct s;
+	const uint8_t nist_key[NUM_OF_NIST_KEYS];
+	const uint8_t plaintext[NUM_OF_NIST_KEYS];
+	uint8_t ciphertext[NUM_OF_NIST_KEYS];
+	uint8_t decrypted[NUM_OF_NIST_KEYS];
+
+	tis_make_unknown(nist_key, sizeof(nist_key));
+	tis_make_unknown(ciphertext, sizeof(ciphertext));
+	tis_make_unknown(plaintext, sizeof(plaintext));
+
+	/**
+	 *  @brief Set AES-128 encryption key
+	 *  Uses key k to initialize s
+	 *  @return  returns TC_CRYPTO_SUCCESS (1)
+	 *	   returns TC_CRYPTO_FAIL (0) if: s == NULL or k == NULL
+	 *  @note       This implementation skips the additional steps required for keys
+	 *	      larger than 128 bits, and must not be used for AES-192 or
+	 *	      AES-256 key schedule -- see FIPS 197 for details
+	 *  @param      s IN/OUT -- initialized struct tc_aes_key_sched_struct
+	 *  @param      k IN -- points to the AES key
+	 */
+	tc_aes128_set_encrypt_key(&s, nist_key);
+
+	/**
+	 *  @brief Set the AES-128 decryption key
+	 *  Uses key k to initialize s
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if: s == NULL or k == NULL
+	 *  @note       This is the implementation of the straightforward inverse cipher
+	 *	      using the cipher documented in FIPS-197 figure 12, not the
+	 *	      equivalent inverse cipher presented in Figure 15
+	 *  @warning    This routine skips the additional steps required for keys larger
+	 *	      than 128, and must not be used for AES-192 or AES-256 key
+	 *	      schedule -- see FIPS 197 for details
+	 *  @param s  IN/OUT -- initialized struct tc_aes_key_sched_struct
+	 *  @param k  IN -- points to the AES key
+	 */
+	tc_aes128_set_decrypt_key(&s, nist_key);
+
+	/**
+	 *  @brief AES-128 Encryption procedure
+	 *  Encrypts contents of in buffer into out buffer under key;
+	 *	      schedule s
+	 *  @note Assumes s was initialized by aes_set_encrypt_key;
+	 *	      out and in point to 16 byte buffers
+	 *  @return  returns TC_CRYPTO_SUCCESS (1)
+	 *	   returns TC_CRYPTO_FAIL (0) if: out == NULL or in == NULL or s == NULL
+	 *  @param out IN/OUT -- buffer to receive ciphertext block
+	 *  @param in IN -- a plaintext block to encrypt
+	 *  @param s IN -- initialized AES key schedule
+	 */
+	tc_aes_encrypt(ciphertext, plaintext, &s);
+
+	/**
+	 *  @brief AES-128 Encryption procedure
+	 *  Decrypts in buffer into out buffer under key schedule s
+	 *  @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if: out is NULL or in is NULL or s is NULL
+	 *  @note   Assumes s was initialized by aes_set_encrypt_key
+	 *	  out and in point to 16 byte buffers
+	 *  @param out IN/OUT -- buffer to receive ciphertext block
+	 *  @param in IN -- a plaintext block to encrypt
+	 *  @param s IN -- initialized AES key schedule
+	 */
+	tc_aes_decrypt(decrypted, ciphertext, &s);
+
+	return TC_PASS;
 }
 
 /*
