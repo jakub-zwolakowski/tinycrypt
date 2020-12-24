@@ -38,6 +38,8 @@
   - AES128 CTR mode encryption SP 800-38a tests
 */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/ctr_mode.h>
 #include <tinycrypt/aes.h>
 #include <tinycrypt/constants.h>
@@ -111,6 +113,65 @@ unsigned int test_1_and_2(void)
  exitTest1:
         TC_END_RESULT(result);
         return result;
+}
+
+int TIS_test(void)
+{
+        const uint8_t key[16];
+        uint8_t ctr[16];
+        const uint8_t input[64];
+        const uint8_t ciphertext[80];
+        uint8_t out[80];
+        uint8_t decrypted[64];
+
+        struct tc_aes_key_sched_struct sched;
+
+        tis_make_unknown(key, sizeof(key));
+        tc_aes128_set_encrypt_key(&sched, key);
+
+        /**
+        *  @brief CTR mode encryption/decryption procedure.
+        *  CTR mode encrypts (or decrypts) inlen bytes from in buffer into out buffer
+        *  @return returns TC_CRYPTO_SUCCESS (1)
+        *          returns TC_CRYPTO_FAIL (0) if:
+        *                out == NULL or
+        *                in == NULL or
+        *                ctr == NULL or
+        *                sched == NULL or
+        *                inlen == 0 or
+        *                outlen == 0 or
+        *                inlen != outlen
+        *  @note Assumes:- The current value in ctr has NOT been used with sched
+        *              - out points to inlen bytes
+        *              - in points to inlen bytes
+        *              - ctr is an integer counter in littleEndian format
+        *              - sched was initialized by aes_set_encrypt_key
+        * @param out OUT -- produced ciphertext (plaintext)
+        * @param outlen IN -- length of ciphertext buffer in bytes
+        * @param in IN -- data to encrypt (or decrypt)
+        * @param inlen IN -- length of input data in bytes
+        * @param ctr IN/OUT -- the current counter value
+        * @param sched IN -- an initialized AES key schedule
+        */
+
+        tis_make_unknown(input, sizeof(input));
+        tis_make_unknown(ctr, sizeof(ctr));
+
+        /* encrypt */
+        tc_ctr_mode(&out[TC_AES_BLOCK_SIZE], (sizeof(out) - TC_AES_BLOCK_SIZE),
+                                             input,
+                                             sizeof(input),
+                                             ctr,
+                                             &sched);
+
+        /* decrypt */
+        tc_ctr_mode(decrypted, sizeof(decrypted),
+                               &out[TC_AES_BLOCK_SIZE],
+                               (sizeof(out) - TC_AES_BLOCK_SIZE),
+                               ctr,
+                               &sched);
+
+        return TC_PASS;
 }
 
 /*

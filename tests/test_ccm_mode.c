@@ -45,6 +45,8 @@
  *  - AES128 CCM mode encryption No payload data
  */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/ccm_mode.h>
 #include <tinycrypt/constants.h>
 #include <test_utils.h>
@@ -483,6 +485,104 @@ int test_vector_8(void)
 exitTest1:
 	TC_END_RESULT(result);
 	return result;
+}
+
+void TIS_test(void)
+{
+	const uint8_t nist_key[NUM_NIST_KEYS];
+	struct tc_aes_key_sched_struct sched;
+
+	uint8_t ciphertext[TC_CCM_MAX_CT_SIZE];
+	uint8_t decrypted[TC_CCM_MAX_PT_SIZE];
+
+	struct tc_ccm_mode_struct c;
+
+	uint8_t nonce[NONCE_LEN];
+	uint16_t mlen = M_LEN8;
+	uint8_t header[HEADER_LEN];
+	uint8_t data[DATA_BUF_LEN23];
+
+	tis_make_unknown(nonce, sizeof(nonce));
+
+	tis_make_unknown(nist_key, sizeof(nist_key));
+	tis_make_unknown(header, sizeof(header));
+	tis_make_unknown(data, sizeof(data));
+
+	tc_aes128_set_encrypt_key(&sched, nist_key);
+
+	/**
+	 * @brief CCM configuration procedure
+	 * @return returns TC_CRYPTO_SUCCESS (1)
+	 *	  returns TC_CRYPTO_FAIL (0) if:
+	 *		c == NULL or
+	 *		sched == NULL or
+	 *		nonce == NULL or
+	 *		mlen != {4, 6, 8, 10, 12, 16}
+	 * @param c -- CCM state
+	 * @param sched IN -- AES key schedule
+	 * @param nonce IN - nonce
+	 * @param nlen -- nonce length in bytes
+	 * @param mlen -- mac length in bytes (parameter t in SP-800 38C)
+	 */
+	tc_ccm_config(&c, &sched, nonce, sizeof(nonce), mlen);
+
+	/**
+	 * @brief CCM tag generation and encryption procedure
+	 * @return returns TC_CRYPTO_SUCCESS (1)
+	 *	 returns TC_CRYPTO_FAIL (0) if:
+	 *		out == NULL or
+	 *		c == NULL or
+	 *		((plen > 0) and (payload == NULL)) or
+	 *		((alen > 0) and (associated_data == NULL)) or
+	 *		(alen >= TC_CCM_AAD_MAX_BYTES) or
+	 *		(plen >= TC_CCM_PAYLOAD_MAX_BYTES) or
+	 *		(olen < plen + maclength)
+	 *
+	 * @param out OUT -- encrypted data
+	 * @param olen IN -- output length in bytes
+	 * @param associated_data IN -- associated data
+	 * @param alen IN -- associated data length in bytes
+	 * @param payload IN -- payload
+	 * @param plen IN -- payload length in bytes
+	 * @param c IN -- CCM state
+	 *
+	 * @note: out buffer should be at least (plen + c->mlen) bytes long.
+	 */
+	 tc_ccm_generation_encryption(ciphertext, TC_CCM_MAX_CT_SIZE,
+						  header,
+						  sizeof(header),
+						  data,
+						  sizeof(data),
+						  &c);
+
+	/**
+	 * @brief CCM decryption and tag verification procedure
+	 * @return returns TC_CRYPTO_SUCCESS (1)
+	 *	 returns TC_CRYPTO_FAIL (0) if:
+	 *		out == NULL or
+	 *		c == NULL or
+	 *		((plen > 0) and (payload == NULL)) or
+	 *		((alen > 0) and (associated_data == NULL)) or
+	 *		(alen >= TC_CCM_AAD_MAX_BYTES) or
+	 *		(plen >= TC_CCM_PAYLOAD_MAX_BYTES) or
+	 *		(olen < plen - c->mlen)
+	 *
+	 * @param out OUT -- decrypted data
+	 * @param associated_data IN -- associated data
+	 * @param alen IN -- associated data length in bytes
+	 * @param payload IN -- payload
+	 * @param plen IN -- payload length in bytes
+	 * @param c IN -- CCM state
+	 *
+	 * @note: out buffer should be at least (plen - c->mlen) bytes long.
+	 */
+	tc_ccm_decryption_verification(decrypted, TC_CCM_MAX_PT_SIZE,
+						  header,
+						  sizeof(header),
+						  ciphertext, sizeof(data)+mlen,
+						  &c);
+
+	return TC_PASS;
 }
 
 /*

@@ -41,6 +41,8 @@
  *  - CMAC test #5 512 bit msg (SP 800-38B test vector #4)
  */
 
+#include <tis_builtin.h>
+
 #include <tinycrypt/cmac_mode.h>
 #include <tinycrypt/constants.h>
 #include <tinycrypt/aes.h>
@@ -245,6 +247,85 @@ static int verify_cmac_512_bit_msg(TCCmacState_t s)
 
 	TC_END_RESULT(result);
 	return result;
+}
+
+int TIS_test(void) {
+
+	struct tc_cmac_struct state;
+	struct tc_aes_key_sched_struct sched;
+
+	uint8_t key[BUF_LEN];
+	uint8_t tag[BUF_LEN];
+	uint8_t data[53];
+
+	tis_make_unknown(key, sizeof(key));
+
+	/**
+	* @brief Initializes a new CMAC computation
+	* @return returns TC_CRYPTO_SUCCESS (1) after having initialized the CMAC state
+	*	 returns TC_CRYPTO_FAIL (0) if:
+	*	      s == NULL
+	*
+	* @param s IN/OUT -- the state to initialize
+	*/
+	tc_cmac_init(&state);
+
+	/**
+	* @brief Configures the CMAC state to use the given AES key
+	* @return returns TC_CRYPTO_SUCCESS (1) after having configured the CMAC state
+	*	 returns TC_CRYPTO_FAIL (0) if:
+	*	      s == NULL or
+	*	      key == NULL
+	*
+	* @param s IN/OUT -- the state to set up
+	* @param key IN -- the key to use
+	* @param sched IN -- AES key schedule
+	*/
+	tc_cmac_setup(&state, key, &sched);
+
+	/**
+	* @brief Erases the CMAC state
+	* @return returns TC_CRYPTO_SUCCESS (1) after having configured the CMAC state
+	*	 returns TC_CRYPTO_FAIL (0) if:
+	*	      s == NULL
+	*
+	* @param s IN/OUT -- the state to erase
+	*/
+	tc_cmac_erase(&state);
+
+	/**
+	* @brief Incrementally computes CMAC over the next data segment
+	* @return returns TC_CRYPTO_SUCCESS (1) after successfully updating the CMAC state
+	*	 returns TC_CRYPTO_FAIL (0) if:
+	*	      s == NULL or
+	*	      if data == NULL when dlen > 0
+	*
+	* @param s IN/OUT -- the CMAC state
+	* @param data IN -- the next data segment to MAC
+	* @param dlen IN -- the length of data in bytes
+	*/
+	tis_make_unknown(data, sizeof(data));
+	size_t data_size;
+
+	tc_cmac_setup(&state, key, &sched);
+	tc_cmac_init(&state);
+	data_size = tis_interval_split (0,sizeof(data));
+	tc_cmac_update(&state, data, data_size);
+	tc_cmac_update(&state, data, data_size);
+
+	/**
+	* @brief Generates the tag from the CMAC state
+	* @return returns TC_CRYPTO_SUCCESS (1) after successfully generating the tag
+	*	 returns TC_CRYPTO_FAIL (0) if:
+	*	      tag == NULL or
+	*	      s == NULL
+	*
+	* @param tag OUT -- the CMAC tag
+	* @param s IN -- CMAC state
+	*/
+	tc_cmac_final(tag, &state);
+
+	return TC_PASS;
 }
 
 /*
